@@ -1,10 +1,15 @@
-# Welcome to Thera [中文版](http://gitlab.alibaba-inc.com/project-falcon/Thera/wikis/readme-cn)
+# Welcome to Thera [中文版](https://github.com/alibaba/Thera/wiki/readme-cn)
+
+[![Build Status](https://travis-ci.org/alibaba/Thera.svg?branch=master)](https://travis-ci.org/alibaba/Thera)   
+
+  
+
 ![](https://img.alicdn.com/tps/TB1meI7OVXXXXXcXXXXXXXXXXXX-1024-460.png)
 
-Thera is a develop tool aimed at improving mobile hybrid solution develop experience, such as weex, luaview, react native. It is built on top of Atom.  
+Thera is a develop tool aiming to improve the developing experience of hybrid mobile app, which use weex, luaview, react native solition. It is built on top of Atom.  
 Thera is founded by Alibaba, and managed by the open source community.  
-We embrace to open source, and hope you can join us.  
-You can follow us on Twitter, fire a bug on github issues, vote for new features, and make pull request.  
+We embrace open sources, hoping you join us.  
+You can follow us on Twitter, fire a bug on github issues, vote for new features, and make pull requests.  
 
 ## Use Thera to develop hybrid apps
 You can use Weex, React Native to develop hybrid apps, We choose Weex to introduce its features.
@@ -65,8 +70,6 @@ and restart Thera if simulators cannot be recognized. Because starting Simulator
 
 
 ## Installing
-#### Prerequisites
- [GitLab](http://gitlab.alibaba-inc.com/project-falcon/Thera)
 
 #### macOS
 Download the latest [Thera release](https://github.com/alibaba/Thera/releases)
@@ -74,6 +77,12 @@ Download the latest [Thera release](https://github.com/alibaba/Thera/releases)
 #### Windows & Linux
 The new skyscraper is still under construction.
 
+## Building 
+Building from source is still under construction, you can check out [thera packages](https://github.com/TheraPackages)
+
+ 
+## Restrictions
+* Vue 2.0 is not supported for now. 
 
 
 ## PMC Members & Committers
@@ -85,4 +94,10 @@ The new skyscraper is still under construction.
 
 
 ## License
-[MIT](http://gitlab.alibaba-inc.com/project-falcon/Thera/blob/develop/LICENSE.md)
+[MIT](https://github.com/alibaba/Thera/blob/master/LICENSE.md)
+
+## F&Q
+[Portal](https://github.com/alibaba/Thera/wiki/F&Q)
+
+
+

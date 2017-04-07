@@ -8,6 +8,8 @@ const getLicenseText = require('./get-license-text')
 const path = require('path')
 const spawnSync = require('./spawn-sync')
 const mkdirp = require('mkdirp')
+const glob = require('glob')
+require('colors')
 
 const CONFIG = require('../config')
 
@@ -53,6 +55,8 @@ module.exports = function () {
 
     copyAttachResources(packagedAppPath, bundledResourcesPath)
 
+    copyResourceInPackage(packagedAppPath, bundledResourcesPath)
+
     return copyNonASARResources(packagedAppPath, bundledResourcesPath).then(() => {
       console.log(`Application bundle created at ${packagedAppPath}`)
       return packagedAppPath
@@ -60,36 +64,56 @@ module.exports = function () {
   })
 }
 
-function installAttachPackages(packagedAppPath, bundledResourcesPath) {
+function installAttachPackages (packagedAppPath, bundledResourcesPath) {
   console.log('install attaching packages')
 
   let packageConfig = JSON.parse(fs.readFileSync(path.join(CONFIG.repositoryRootPath, 'package.json')))
   const attachPackage = packageConfig['attach-package']
   if (attachPackage) {
     Object.keys(attachPackage).forEach((key) => {
-      if (!attachPackage.hasOwnProperty(key)) return;
+      if (!attachPackage.hasOwnProperty(key)) return
 
       let gitPath = attachPackage[key]
       let packagePath = path.join(CONFIG.repositoryRootPath, 'attach-package')
 
-      if (fs.statSync(path.join(packagePath, 'node_modules', key)).isDirectory()) {
-        console.log(`skip package ${key} install`.gray)
-        return;
+      let attachPackageDesp
+      let preVer = 'do not exist'
+
+      if (fs.existsSync(path.join(packagePath, 'node_modules', key))) {
+        attachPackageDesp = fs.readJsonSync(path.join(packagePath, 'node_modules', key, 'package.json'))
+        preVer = attachPackageDesp._from
       }
 
-      console.log(`Install package ${key} to ${packagePath}`)
-      childProcess.execFileSync(
-        CONFIG.getNpmBinPath(),
-        ['--global-style', '--loglevel=error', 'install', gitPath],
-        {env: process.env, cwd: packagePath, stdio:'inherit'}
-      )
+      if (gitPath === preVer) {
+        console.log(`skip package ${key} install, exist version ${preVer}`.gray)
+        return
+      }
 
-      console.log(`Install package ${packagePath}/${key}`)
-      childProcess.execFileSync(
-        CONFIG.getApmBinPath(),
-        ['--global-style', '--loglevel=error', 'install'],
-        {env: process.env, cwd: path.join(packagePath, 'node_modules', key), stdio:'inherit'}
-      )
+      try {
+        if (gitPath.startsWith('git') || gitPath.startsWith('http')) {
+          console.log(`Install package ${key} to ${packagePath} path ${gitPath}, previous version ${preVer}`)
+          childProcess.execFileSync(
+            CONFIG.getNpmBinPath(),
+            ['install', gitPath, '--global-style', '--loglevel=error'],
+            {env: process.env, cwd: packagePath, stdio:'inherit'}
+          )
+        } else {
+          console.log(`Install package ${key} to ${packagePath} version ${gitPath}`)
+          childProcess.execFileSync(
+            CONFIG.getNpmBinPath(),
+            ['install', `${key}@${gitPath}`, '--global-style', '--loglevel=error'],
+            {env: process.env, cwd: packagePath, stdio:'inherit'}
+          )
+        }
+      } catch (error) {
+        console.log(`Npm install ${key} failed, apm install again`)
+
+        childProcess.execFileSync(
+          CONFIG.getApmBinPath(),
+          ['install', `${key}@${gitPath}`, '--global-style', '--loglevel=error'],
+          {env: process.env, cwd: path.join(packagePath, 'node_modules', key), stdio:'inherit'}
+        )
+      }
     })
 
     console.log(`Copy attach package from ${path.join(CONFIG.repositoryRootPath, 'attach-package', 'node_modules')} to ${path.join(bundledResourcesPath, 'attach-package')}`)
@@ -100,8 +124,42 @@ function installAttachPackages(packagedAppPath, bundledResourcesPath) {
       {recursive: true},
       (err) => {
         if (err) throw err
-    })
+      })
   }
+}
+
+function copyResourceInPackage (packagedAppPath, bundledResourcesPath) {
+  console.log('copyResourceInPackage')
+  findAndMoveResourceInPackage(path.join(CONFIG.repositoryRootPath, 'node_modules', '*', 'package.json'), bundledResourcesPath, false)
+  findAndMoveResourceInPackage(path.join(bundledResourcesPath, 'attach-package', '*', 'package.json'), bundledResourcesPath, true)
+}
+
+function findAndMoveResourceInPackage (searchPath, bundledResourcesPath, remove) {
+  glob.sync(searchPath)
+  .map((packagePath) => {
+    return {
+      packagePath: packagePath,
+      obj: fs.readJsonSync(packagePath)
+    } })
+  .filter((info) => {
+    if (info.obj.attachResource) {
+      console.log(`find resource ${info.obj.attachResource}`)
+    }
+    return info.obj.attachResource !== undefined
+  })
+  .forEach((info) => {
+    let arr = info.packagePath.split(path.sep)
+    let dirName = arr[arr.length - 2]
+
+    let fromPath = path.join(path.dirname(info.packagePath), info.obj.attachResource)
+    let toPath = path.join(bundledResourcesPath, 'attach-resources', dirName, info.obj.attachResource)
+    console.log(`copy ${fromPath} to ${toPath}`)
+    fs.copySync(fromPath, toPath, {recursive: true})
+    if (remove) {
+      console.log(`remove ${fromPath}`)
+      fs.removeSync(fromPath)
+    }
+  })
 }
 
 function copyAttachResources (packagedAppPath, bundledResourcesPath) {
@@ -117,6 +175,12 @@ function copyAttachResources (packagedAppPath, bundledResourcesPath) {
       if (err) throw err
     }
   )
+
+  // copy package version infos
+  fromPath = path.join(CONFIG.repositoryRootPath, 'out', 'app', 'package.json')
+  toPath = path.join(bundledResourcesPath, 'attach-resources', 'package.json')
+  console.log(`Copying ${fromPath} to "${toPath}"`)
+  fs.copySync(fromPath, toPath)
 }
 
 function copyNonASARResources (packagedAppPath, bundledResourcesPath) {
